@@ -1,0 +1,166 @@
+#:kivy 2.1.0
+
+<AegisScreen>:
+    canvas.before:
+        Color:
+            rgba: 0.043, 0.070, 0.117, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    BoxLayout:
+        orientation: "vertical"
+        padding: 24
+        spacing: 12
+
+        Label:
+            text: root.title_text
+            font_name: "Tahoma"
+            font_size: "24sp"
+            bold: True
+            color: 0.133, 0.827, 0.933, 1
+            size_hint_y: None
+            height: "40dp"
+
+        Button:
+            text: root.btn_algo_text
+            font_name: "Tahoma"
+            font_size: "14sp"
+            size_hint_y: None
+            height: "44dp"
+            background_normal: ""
+            background_color: 0.145, 0.224, 0.337, 1
+            color: 0.133, 0.827, 0.933, 1
+            on_release: root.toggle_algorithm()
+
+        Button:
+            text: root.btn_select_text
+            font_name: "Tahoma"
+            font_size: "15sp"
+            size_hint_y: None
+            height: "48dp"
+            background_normal: ""
+            background_color: 0.106, 0.173, 0.267, 1
+            color: 0.886, 0.909, 0.941, 1
+            on_release: root.select_file()
+
+        Label:
+            text: root.selected_file_text
+            font_name: "Tahoma"
+            font_size: "13sp"
+            color: 0.58, 0.64, 0.72, 1
+            size_hint_y: None
+            height: "36dp"
+            text_size: self.width, None
+            halign: "center"
+            valign: "middle"
+
+        TextInput:
+            id: pwd_input
+            hint_text: root.hint_pwd_text
+            font_name: "Tahoma"
+            password: True
+            multiline: False
+            size_hint_y: None
+            height: "46dp"
+            background_color: 0.059, 0.094, 0.149, 1
+            foreground_color: 0.886, 0.909, 0.941, 1
+            cursor_color: 0.133, 0.827, 0.933, 1
+            padding: [12, 12]
+
+        BoxLayout:
+            size_hint_y: None
+            height: "66dp"
+            spacing: 8
+
+            BoxLayout:
+                orientation: "vertical"
+
+                Label:
+                    text: root.memory_label
+                    font_name: "Tahoma"
+                    font_size: "12sp"
+                    color: 0.58, 0.64, 0.72, 1
+
+                TextInput:
+                    id: memory_input
+                    text: "64"
+                    font_name: "Tahoma"
+                    font_size: "14sp"
+                    input_filter: "int"
+                    multiline: False
+                    halign: "center"
+                    foreground_color: 0.886, 0.909, 0.941, 1
+                    background_color: 0.059, 0.094, 0.149, 1
+
+            BoxLayout:
+                orientation: "vertical"
+
+                Label:
+                    text: root.iterations_label
+                    font_name: "Tahoma"
+                    font_size: "12sp"
+                    color: 0.58, 0.64, 0.72, 1
+
+                TextInput:
+                    id: iterations_input
+                    text: "2"
+                    font_name: "Tahoma"
+                    font_size: "14sp"
+                    input_filter: "int"
+                    multiline: False
+                    halign: "center"
+                    foreground_color: 0.886, 0.909, 0.941, 1
+                    background_color: 0.059, 0.094, 0.149, 1
+
+            BoxLayout:
+                orientation: "vertical"
+
+                Label:
+                    text: root.parallel_label
+                    font_name: "Tahoma"
+                    font_size: "12sp"
+                    color: 0.58, 0.64, 0.72, 1
+
+                TextInput:
+                    id: parallel_input
+                    text: "2"
+                    font_name: "Tahoma"
+                    font_size: "14sp"
+                    input_filter: "int"
+                    multiline: False
+                    halign: "center"
+                    foreground_color: 0.886, 0.909, 0.941, 1
+                    background_color: 0.059, 0.094, 0.149, 1
+
+        BoxLayout:
+            size_hint_y: None
+            height: "50dp"
+            spacing: 12
+
+            Button:
+                text: root.btn_enc_text
+                font_name: "Tahoma"
+                bold: True
+                background_normal: ""
+                background_color: 0.133, 0.827, 0.933, 1
+                color: 0.043, 0.070, 0.117, 1
+                on_release: root.run_action("encrypt", pwd_input.text)
+
+            Button:
+                text: root.btn_dec_text
+                font_name: "Tahoma"
+                bold: True
+                background_normal: ""
+                background_color: 0.133, 0.772, 0.368, 1
+                color: 0.043, 0.070, 0.117, 1
+                on_release: root.run_action("decrypt", pwd_input.text)
+
+        Label:
+            text: root.status_text
+            font_name: "Tahoma"
+            font_size: "13sp"
+            color: root.status_color
+            halign: "center"
+            valign: "middle"
+            text_size: self.width, None
