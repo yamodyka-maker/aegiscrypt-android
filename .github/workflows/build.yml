@@ -35,10 +35,12 @@ jobs:
             libncurses5-dev libncursesw5-dev libreadline-dev \
             libsqlite3-dev libbz2-dev liblzma-dev ccache
 
-    - name: Install Python Build Dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install --upgrade "cython<3.0" pycparser setuptools wheel buildozer
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y git zip unzip python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+          pip3 install --upgrade pip
+          pip3 install --upgrade setuptools wheel pycparser cffi buildozer cython virtualenv
 
     - name: Accept Android Licenses & Build APK
       run: |
