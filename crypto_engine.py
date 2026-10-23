@@ -1,7 +1,32 @@
 # crypto_engine.py
 import os
 import struct
-from argon2.low_level import Type, hash_secret_raw
+
+try:
+    from argon2.low_level import Type, hash_secret_raw
+except ImportError:
+    # حالت اجرا روی اندروید با پکیج argon2-cffi-bindings
+    from _argon2_cffi_bindings import ffi, lib
+    
+    class Type:
+        D = 0
+        I = 1
+        ID = 2  # Argon2id
+    
+    def hash_secret_raw(secret: bytes, salt: bytes, time_cost: int, memory_cost: int, parallelism: int, hash_len: int, type: int):
+        out = ffi.new(f"uint8_t[{hash_len}]")
+        res = lib.argon2_hash(
+            time_cost, memory_cost, parallelism,
+            secret, len(secret),
+            salt, len(salt),
+            out, hash_len,
+            ffi.NULL, 0,
+            type, 0x13
+        )
+        if res != 0:
+            raise ValueError(f"Argon2 failed with error code {res}")
+        return bytes(ffi.buffer(out, hash_len))
+
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM, ChaCha20Poly1305
 
