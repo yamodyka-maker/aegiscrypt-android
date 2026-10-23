@@ -2,6 +2,11 @@ import traceback
 import sys
 from kivy.app import App
 from kivy.uix.label import Label
+try:
+    import crypto_engine
+except Exception as e:
+    crypto_engine = None
+    IMPORT_ERROR = str(e)
 
 # تله برای گرفتن ارورهای پایتون و نمایش روی صفحه گوشی به جای بسته شدن ناگهانی
 def show_crash_screen(error_text):
@@ -25,15 +30,15 @@ from cryptography.exceptions import InvalidTag
 
 from crypto_engine import encrypt_file, decrypt_file
 
-def fix_text(text: str) -> str:
-    return text  # فعلا بدون reshaping برای تست اجرا
+#def fix_text(text: str) -> str:
+#    return text  # فعلا بدون reshaping برای تست اجرا
 
-#def fa(text: str) -> str:
-#    """اصلاح شکل و جهت نمایش متن فارسی در Kivy."""
-#    try:
-#        return get_display(arabic_reshaper.reshape(str(text)))
-#    except Exception:
-#        return str(text)
+def fa(text: str) -> str:
+    """اصلاح شکل و جهت نمایش متن فارسی در Kivy."""
+    try:
+        return get_display(arabic_reshaper.reshape(str(text)))
+    except Exception:
+        return str(text)
 
 
 class AegisScreen(Screen):
