@@ -1,155 +1,259 @@
-import sys
-import traceback
+import os
+import threading
 
-CRASH_ERROR = None
+from kivy.app import App
+from kivy.clock import Clock
+from kivy.properties import StringProperty, ListProperty
+from kivy.uix.screenmanager import Screen
+from plyer import filechooser
 
-try:
-    import os, threading
-    from kivy.app import App
-    from kivy.clock import Clock
-    from kivy.properties import StringProperty, ListProperty
-    from kivy.uix.screenmanager import Screen
-    from plyer import filechooser
-    import arabic_reshaper
-    from bidi.algorithm import get_display
-    from cryptography.exceptions import InvalidTag
-    from crypto_engine import encrypt_file, decrypt_file
-except Exception:
-    CRASH_ERROR = traceback.format_exc()
+import arabic_reshaper
+from bidi.algorithm import get_display
+from cryptography.exceptions import InvalidTag
 
-if CRASH_ERROR:
-    from kivy.app import App
-    from kivy.uix.scrollview import ScrollView
-    from kivy.uix.label import Label
+from crypto_engine import encrypt_file, decrypt_file
 
-    class CrashApp(App):
-        def build(self):
-            sv = ScrollView()
-            lbl = Label(
-                text=f"=== STARTUP IMPORT ERROR ===\n\n{CRASH_ERROR}",
-                size_hint_y=None,
-                font_size='13sp',
-                halign='left',
-                valign='top'
-            )
-            lbl.bind(texture_size=lbl.setter('size'))
-            sv.add_widget(lbl)
-            return sv
 
-    if __name__ == '__main__':
-        CrashApp().run()
+def fa(text: str) -> str:
+    """اصلاح شکل و جهت نمایش متن فارسی در Kivy."""
+    try:
+        return get_display(arabic_reshaper.reshape(str(text)))
+    except Exception:
+        return str(text)
 
-else:
-    # کدهای اصلی خود برنامه
-    def fix_text(text: str) -> str:
-        try:
-            reshaped = arabic_reshaper.reshape(text)
-            return get_display(reshaped)
-        except Exception:
-            return text
 
-    class AegisScreen(Screen):
-        selected_file = StringProperty("")
-        status_text   = StringProperty("")
-        status_color  = ListProperty([0.5, 0.5, 0.5, 1])
+class AegisScreen(Screen):
+    title_text = StringProperty(fa("AegisCrypt - محافظ فایل"))
 
-        def on_kv_post(self, base_widget):
-            super().on_kv_post(base_widget)
-            self.set_status("Ready", [0.4, 0.8, 0.4, 1])
+    btn_algo_text = StringProperty(fa("الگوریتم: AES-256-GCM"))
+    btn_select_text = StringProperty(fa("[ انتخاب فایل ]"))
+    hint_pwd_text = StringProperty(fa("رمز عبور را وارد کنید..."))
+    btn_enc_text = StringProperty(fa("رمزنگاری"))
+    btn_dec_text = StringProperty(fa("رمزگشایی"))
 
-        def set_status(self, text, color):
-            self.status_text  = fix_text(text)
+    memory_label = StringProperty(fa("حافظه (MiB)"))
+    iterations_label = StringProperty(fa("تکرار"))
+    parallel_label = StringProperty(fa("موازی‌سازی"))
+
+    selected_path = None
+    current_algorithm = "AES-256-GCM"
+
+    selected_file_text = StringProperty(fa("فایلی انتخاب نشده است"))
+    status_text = StringProperty(fa("سیستم آماده است (AEAD Protected)"))
+    status_color = ListProperty([0.58, 0.64, 0.72, 1])
+
+    def set_status(self, text, color=None):
+        self.status_text = fa(text)
+        if color is not None:
             self.status_color = color
 
-        def open_file_chooser(self):
+    def toggle_algorithm(self):
+        if self.current_algorithm == "AES-256-GCM":
+            self.current_algorithm = "ChaCha20-Poly1305"
+        else:
+            self.current_algorithm = "AES-256-GCM"
+
+        self.btn_algo_text = fa(f"الگوریتم: {self.current_algorithm}")
+        self.set_status(
+            f"الگوریتم انتخاب شد: {self.current_algorithm}",
+            [0.13, 0.83, 0.93, 1],
+        )
+
+    def select_file(self):
+        try:
+            filechooser.open_file(on_selection=self.on_file_selected)
+        except Exception as exc:
+            self.set_status(
+                f"خطا در باز کردن فایل‌خوان: {exc}",
+                [0.97, 0.44, 0.44, 1],
+            )
+
+    def on_file_selected(self, selection):
+        if not selection:
+            return
+
+        try:
+            self.selected_path = selection[0]
+            size_mb = os.path.getsize(self.selected_path) / (1024 * 1024)
+            filename = os.path.basename(self.selected_path)
+
+            self.selected_file_text = fa(
+                f"فایل: {filename} ({size_mb:.2f} MB)"
+            )
+            self.set_status(
+                "فایل انتخاب شد. آماده عملیات.",
+                [0.13, 0.77, 0.37, 1],
+            )
+        except Exception as exc:
+            self.set_status(
+                f"خطا در خواندن فایل: {exc}",
+                [0.97, 0.44, 0.44, 1],
+            )
+
+    def read_kdf_parameters(self):
+        try:
+            memory_mib = int(self.ids.memory_input.text.strip())
+            iterations = int(self.ids.iterations_input.text.strip())
+            parallel = int(self.ids.parallel_input.text.strip())
+        except ValueError:
+            raise ValueError("مقادیر حافظه، تکرار و موازی‌سازی باید عدد صحیح باشند.")
+
+        if not 8 <= memory_mib <= 512:
+            raise ValueError("حافظه باید بین 8 تا 512 MiB باشد.")
+
+        if not 1 <= iterations <= 10:
+            raise ValueError("تعداد تکرار باید بین 1 تا 10 باشد.")
+
+        if not 1 <= parallel <= 8:
+            raise ValueError("موازی‌سازی باید بین 1 تا 8 باشد.")
+
+        memory_kib = memory_mib * 1024
+        return memory_kib, iterations, parallel
+
+    def run_action(self, mode: str, password: str):
+        if not self.selected_path or not os.path.exists(self.selected_path):
+            self.set_status(
+                "لطفاً ابتدا یک فایل را انتخاب کنید.",
+                [0.97, 0.44, 0.44, 1],
+            )
+            return
+
+        if not password:
+            self.set_status(
+                "رمز عبور نمی‌تواند خالی باشد.",
+                [0.97, 0.44, 0.44, 1],
+            )
+            return
+
+        kdf_params = None
+        algorithm = None
+
+        if mode == "encrypt":
             try:
-                filechooser.open_file(on_selection=self._on_file_selected)
-            except Exception as e:
-                self.set_status(f"Error opening file: {e}", [0.9, 0.3, 0.3, 1])
-
-        def _on_file_selected(self, selection):
-            if selection:
-                self.selected_file = selection[0]
-                fname = os.path.basename(selection[0])
-                self.set_status(f"Selected: {fname}", [0.4, 0.8, 0.4, 1])
-
-        def start_encrypt(self):
-            pw  = self.ids.password_input.text
-            alg = self.ids.algo_spinner.text
-            path = self.selected_file
-
-            if not path or not os.path.exists(path):
-                self.set_status("Please select a file first.", [0.9, 0.3, 0.3, 1])
-                return
-            if not pw:
-                self.set_status("Password cannot be empty.", [0.9, 0.3, 0.3, 1])
+                kdf_params = self.read_kdf_parameters()
+            except ValueError as exc:
+                self.set_status(str(exc), [0.97, 0.44, 0.44, 1])
                 return
 
-            self.set_status("Encrypting...", [0.3, 0.6, 1, 1])
-            self.ids.btn_encrypt.disabled = True
-            self.ids.btn_decrypt.disabled = True
+            algorithm = self.current_algorithm
 
-            t = threading.Thread(target=self._run_encrypt, args=(path, pw, alg), daemon=True)
-            t.start()
+        src = self.selected_path
 
-        def _run_encrypt(self, path, pw, alg):
-            try:
-                out = encrypt_file(path, pw, alg)
-                Clock.schedule_once(lambda dt: self._on_success(f"Encrypted:\n{os.path.basename(out)}"))
-            except Exception as e:
-                Clock.schedule_once(lambda dt: self._on_error(str(e)))
+        self.set_status(
+            "در حال پردازش در پس‌زمینه...",
+            [0.13, 0.83, 0.93, 1],
+        )
 
-        def start_decrypt(self):
-            pw   = self.ids.password_input.text
-            path = self.selected_file
+        threading.Thread(
+            target=self._worker,
+            args=(mode, password, src, algorithm, kdf_params),
+            daemon=True,
+        ).start()
 
-            if not path or not os.path.exists(path):
-                self.set_status("Please select a file first.", [0.9, 0.3, 0.3, 1])
-                return
-            if not pw:
-                self.set_status("Password cannot be empty.", [0.9, 0.3, 0.3, 1])
-                return
+    def _worker(self, mode, password, src, algorithm, kdf_params):
+        try:
+            if mode == "encrypt":
+                memory_kib, iterations, parallel = kdf_params
+                dst = src + ".aegis"
 
-            self.set_status("Decrypting...", [0.3, 0.6, 1, 1])
-            self.ids.btn_encrypt.disabled = True
-            self.ids.btn_decrypt.disabled = True
+                encrypt_file(
+                    src,
+                    dst,
+                    password,
+                    algorithm,
+                    memory_kib,
+                    iterations,
+                    parallel,
+                )
 
-            t = threading.Thread(target=self._run_decrypt, args=(path, pw), daemon=True)
-            t.start()
+                filename = os.path.basename(dst)
+                message = (
+                    f"[موفق] رمزنگاری انجام شد ({algorithm})\n"
+                    f"حافظه: {memory_kib // 1024} MiB | "
+                    f"تکرار: {iterations} | "
+                    f"موازی‌سازی: {parallel}\n"
+                    f"خروجی: {filename}"
+                )
 
-        def _run_decrypt(self, path, pw):
-            try:
-                out = decrypt_file(path, pw)
-                Clock.schedule_once(lambda dt: self._on_success(f"Decrypted:\n{os.path.basename(out)}"))
-            except InvalidTag:
-                Clock.schedule_once(lambda dt: self._on_error("Decryption failed! Wrong password or corrupt file."))
-            except Exception as e:
-                Clock.schedule_once(lambda dt: self._on_error(str(e)))
+                Clock.schedule_once(
+                    lambda dt: self.set_status(
+                        message,
+                        [0.13, 0.77, 0.37, 1],
+                    )
+                )
 
-        def _on_success(self, msg):
-            self.set_status(msg, [0.4, 0.8, 0.4, 1])
-            self.ids.btn_encrypt.disabled = False
-            self.ids.btn_decrypt.disabled = False
+            else:
+                dst = (
+                    src[:-6] + ".decrypted"
+                    if src.endswith(".aegis")
+                    else src + ".decrypted"
+                )
 
-        def _on_error(self, msg):
-            self.set_status(f"Error: {msg}", [0.9, 0.3, 0.3, 1])
-            self.ids.btn_encrypt.disabled = False
-            self.ids.btn_decrypt.disabled = False
+                algo_name, memory_kib, iterations, parallel = decrypt_file(
+                    src,
+                    dst,
+                    password,
+                )
+
+                filename = os.path.basename(dst)
+                message = (
+                    f"[موفق] رمزگشایی انجام شد ({algo_name})\n"
+                    f"حافظه: {memory_kib // 1024} MiB | "
+                    f"تکرار: {iterations} | "
+                    f"موازی‌سازی: {parallel}\n"
+                    f"خروجی: {filename}"
+                )
+
+                Clock.schedule_once(
+                    lambda dt: self.set_status(
+                        message,
+                        [0.13, 0.77, 0.37, 1],
+                    )
+                )
+
+        except InvalidTag:
+            Clock.schedule_once(
+                lambda dt: self.set_status(
+                    "[خطا] رمز عبور نادرست است یا فایل دستکاری شده است.",
+                    [0.97, 0.44, 0.44, 1],
+                )
+            )
+
+        except Exception as exc:
+            error_message = f"[خطا] در پردازش: {exc}"
+            Clock.schedule_once(
+                lambda dt: self.set_status(
+                    error_message,
+                    [0.97, 0.44, 0.44, 1],
+                )
+            )
 
 
-    class AegisApp(App):
-        def build(self):
-            self.title = "AegisCrypt"
-            try:
-                return AegisScreen()
-            except Exception:
-                from kivy.uix.scrollview import ScrollView
-                from kivy.uix.label import Label
+class AegisApp(App):
+    def build(self):
+        self.title = "AegisCrypt"
+        return AegisScreen()
+
+
+if __name__ == '__main__':
+    try:
+        # نام کلاس اصلی برنامه شما (مثلاً AegisApp)
+        AegisApp().run()
+    except Exception as e:
+        import traceback
+        err_msg = traceback.format_exc()
+        
+        # اگر خطا رخ داد، یک صفحه اضطراری متن خطا را نشان دهد
+        from kivy.app import App
+        from kivy.uix.scrollview import ScrollView
+        from kivy.uix.label import Label
+        
+        class CrashReporterApp(App):
+            def build(self):
                 sv = ScrollView()
-                lbl = Label(text=traceback.format_exc(), size_hint_y=None, font_size='13sp')
+                lbl = Label(text=err_msg, size_hint_y=None, font_size='12sp')
                 lbl.bind(texture_size=lbl.setter('size'))
                 sv.add_widget(lbl)
                 return sv
-
-    if __name__ == '__main__':
-        AegisApp().run()
+                
+        CrashReporterApp().run()
