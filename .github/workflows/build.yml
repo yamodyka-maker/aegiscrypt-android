@@ -19,6 +19,16 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y git zip unzip python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libreadline-dev libsqlite3-dev libbz2-dev liblzma-dev ccache
+          pip3 install --upgrade pip
+          pip3 install --upgrade buildozer cython==0.29.36 virtualenv
+
+
+
       - name: Install System and Python Dependencies
         run: |
           sudo apt-get update
