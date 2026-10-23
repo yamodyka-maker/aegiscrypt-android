@@ -235,5 +235,25 @@ class AegisApp(App):
         return AegisScreen()
 
 
-if __name__ == "__main__":
-    AegisApp().run()
+if __name__ == '__main__':
+    try:
+        # نام کلاس اصلی برنامه شما (مثلاً AegisApp)
+        AegisApp().run()
+    except Exception as e:
+        import traceback
+        err_msg = traceback.format_exc()
+        
+        # اگر خطا رخ داد، یک صفحه اضطراری متن خطا را نشان دهد
+        from kivy.app import App
+        from kivy.uix.scrollview import ScrollView
+        from kivy.uix.label import Label
+        
+        class CrashReporterApp(App):
+            def build(self):
+                sv = ScrollView()
+                lbl = Label(text=err_msg, size_hint_y=None, font_size='12sp')
+                lbl.bind(texture_size=lbl.setter('size'))
+                sv.add_widget(lbl)
+                return sv
+                
+        CrashReporterApp().run()
