@@ -24,7 +24,7 @@ from kivy.properties import StringProperty, ListProperty
 from kivy.uix.screenmanager import Screen
 from plyer import filechooser
 
-import arabic_reshaper
+#import arabic_reshaper
 from bidi.algorithm import get_display
 from cryptography.exceptions import InvalidTag
 
@@ -36,7 +36,7 @@ from crypto_engine import encrypt_file, decrypt_file
 def fa(text: str) -> str:
     """اصلاح شکل و جهت نمایش متن فارسی در Kivy."""
     try:
-        return get_display(arabic_reshaper.reshape(str(text)))
+#        return get_display(arabic_reshaper.reshape(str(text)))
     except Exception:
         return str(text)
 
