@@ -18,3 +18,5 @@ android.ndk = 25b
 android.sdk = 33
 android.accept_sdk_license = True
 p4a.branch = master
+# (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
+log_level = 2
