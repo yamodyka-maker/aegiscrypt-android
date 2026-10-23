@@ -1,3 +1,15 @@
+import traceback
+import sys
+from kivy.app import App
+from kivy.uix.label import Label
+
+# تله برای گرفتن ارورهای پایتون و نمایش روی صفحه گوشی به جای بسته شدن ناگهانی
+def show_crash_screen(error_text):
+    class CrashApp(App):
+        def build(self):
+            return Label(text=error_text, font_size=14, halign='center', valign='middle')
+    CrashApp().run()
+
 import os
 import threading
 
