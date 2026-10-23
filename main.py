@@ -25,8 +25,8 @@ from kivy.uix.screenmanager import Screen
 from plyer import filechooser
 
 #import arabic_reshaper
-from bidi.algorithm import get_display
-from cryptography.exceptions import InvalidTag
+#from bidi.algorithm import get_display
+#from cryptography.exceptions import InvalidTag
 
 from crypto_engine import encrypt_file, decrypt_file
 
