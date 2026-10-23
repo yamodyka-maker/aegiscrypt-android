@@ -13,13 +13,15 @@ from cryptography.exceptions import InvalidTag
 
 from crypto_engine import encrypt_file, decrypt_file
 
+def fix_text(text: str) -> str:
+    return text  # فعلا بدون reshaping برای تست اجرا
 
-def fa(text: str) -> str:
-    """اصلاح شکل و جهت نمایش متن فارسی در Kivy."""
-    try:
-        return get_display(arabic_reshaper.reshape(str(text)))
-    except Exception:
-        return str(text)
+#def fa(text: str) -> str:
+#    """اصلاح شکل و جهت نمایش متن فارسی در Kivy."""
+#    try:
+#        return get_display(arabic_reshaper.reshape(str(text)))
+#    except Exception:
+#        return str(text)
 
 
 class AegisScreen(Screen):
