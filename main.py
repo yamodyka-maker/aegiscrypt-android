@@ -35,10 +35,10 @@ from crypto_engine import encrypt_file, decrypt_file
 
 def fa(text: str) -> str:
     """اصلاح شکل و جهت نمایش متن فارسی در Kivy."""
-    try:
+#   try:
 #        return get_display(arabic_reshaper.reshape(str(text)))
-    except Exception:
-        return str(text)
+#    except Exception:
+#        return str(text)
 
 
 class AegisScreen(Screen):
