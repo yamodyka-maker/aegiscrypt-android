@@ -6,7 +6,7 @@ source.dir = .
 source.exts = py,png,jpg,kv,atlas,ttf
 version = 1.2.0
 
-requirements = python3,kivy,plyer,cryptography,argon2-cffi-bindings,cffi,pycparser
+requirements = python3,kivy==2.3.1,cryptography,plyer
 
 orientation = portrait
 fullscreen = 0
