@@ -1,5 +1,6 @@
 import os
 import threading
+from kivy.clock import mainthread
 
 from kivy.app import App
 from kivy.clock import Clock
@@ -54,15 +55,26 @@ class AegisScreen(Screen): # یا هر نام کلاسی که صفحه‌تان 
         try:
             filechooser.open_file(on_selection=self._on_file_selected)
         except Exception as e:
-            self.status_text = f"File selection error: {e}"
+            self.status_text = f"Error: {e}"
 
+    @mainthread
     def _on_file_selected(self, selection):
-        if selection and len(selection) > 0:
-            self.selected_path = selection[0]
-            filename = os.path.basename(self.selected_path)
-            self.selected_file_text = f"Selected: {filename}"
-            self.status_text = "Status: File loaded successfully"
+        if not selection:
+            self.status_text = "No file selected"
+            return
 
+        # اگر خروجی لیست یا تاپل بود اولین آیتم، وگرنه خود مقدار
+        path = selection[0] if isinstance(selection, (list, tuple)) else selection
+        
+        if isinstance(path, bytes):
+            path = path.decode('utf-8')
+            
+        self.selected_path = str(path)
+        filename = os.path.basename(self.selected_path)
+        
+        # آپدیت فیلدهای نمایشی روی ترد اصلی
+        self.selected_file_text = f"Selected: {filename}"
+        self.status_text = "Status: File loaded successfully"
     def read_kdf_parameters(self):
         try:
             m_input = int(self.ids.memory_input.text.strip() or 64)
@@ -80,15 +92,21 @@ class AegisScreen(Screen): # یا هر نام کلاسی که صفحه‌تان 
         except ValueError as ve:
             raise ValueError(str(ve))
 
+    
     def run_action(self, mode, password):
-        if not self.selected_path or not os.path.exists(self.selected_path):
+        if not self.selected_path:
             self.status_text = "Error: Please select a valid file first."
+            return
+
+        # بررسی وجود فایل فقط در صورتی که مسیر عادی دیسک باشد
+        # در اندروید اگر os.path.exists به خاطر پرمیشن False داد ولی مسیر داریم، متوقف نشو
+        if not self.selected_path.startswith("content://") and not os.path.exists(self.selected_path):
+            self.status_text = "Error: File path is not accessible."
             return
 
         if not password:
             self.status_text = "Error: Password cannot be empty."
             return
-
         kdf_params = None
         algorithm = self.current_algorithm
         
