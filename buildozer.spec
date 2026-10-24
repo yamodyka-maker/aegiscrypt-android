@@ -1,7 +1,7 @@
 [app]
 title = AegisCrypt
 package.name = aegiscrypt
-package.domain = org.aegis
+package.domain = com.aegislabs.us
 source.dir = .
 source.exts = py,png,jpg,kv,atlas,ttf
 version = 1.2.0
@@ -12,7 +12,7 @@ orientation = portrait
 fullscreen = 0
 android.permissions = WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
 android.api = 33
-android.minapi = 21
+android.minapi = 24
 android.archs = arm64-v8a
 android.ndk = 25b
 android.sdk = 33
