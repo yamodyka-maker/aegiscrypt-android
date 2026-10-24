@@ -53,9 +53,9 @@ class AegisScreen(Screen): # یا هر نام کلاسی که صفحه‌تان 
 
     def select_file(self):
         try:
-            filechooser.open_file(on_selection=self._on_file_selected)
-        except Exception as e:
-            self.status_text = f"Error: {e}"
+            filechooser.open_file(on_selection=self.on_file_selected)
+        except Exception as exc:
+            self.set_status(f"خطا در انتخاب فایل: {exc}", [0.97, 0.44, 0.44, 1])
 
     @mainthread
     def on_file_selected(self, selection):
