@@ -98,8 +98,7 @@ class AegisScreen(Screen): # یا هر نام کلاسی که صفحه‌تان 
             self.status_text = "Error: Please select a valid file first."
             return
 
-        # بررسی وجود فایل فقط در صورتی که مسیر عادی دیسک باشد
-        # در اندروید اگر os.path.exists به خاطر پرمیشن False داد ولی مسیر داریم، متوقف نشو
+        # اگر مسیر با content:// شروع شود معتبر است؛ در غیر این صورت باید روی دیسک وجود داشته باشد
         if not self.selected_path.startswith("content://") and not os.path.exists(self.selected_path):
             self.status_text = "Error: File path is not accessible."
             return
