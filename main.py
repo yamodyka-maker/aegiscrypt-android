@@ -20,7 +20,9 @@ def fa(text: str) -> str:
     except Exception:
         return str(text)
 
-class AegisScreen(Screen):
+from kivy.properties import ListProperty, StringProperty
+class AegisScreen(Screen): # یا هر نام کلاسی که صفحه‌تان دارد
+    status_color = ListProperty([1, 1, 1, 1]) # رنگ پیش‌فرض مثلاً سفید یا سبز/قرمز دلخواه
     # تطابق ۱۰۰ درصدی با متغیرهای aegis.kv
     title_text = StringProperty("AegisCrypt Secure Vault")
     btn_algo_text = StringProperty("Algorithm: AES-256-GCM")
