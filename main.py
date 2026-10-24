@@ -59,8 +59,10 @@ class AegisScreen(Screen): # یا هر نام کلاسی که صفحه‌تان 
 
     @mainthread
     def _on_file_selected(self, selection):
+        print(f"DEBUG SELECTION: {selection}")
+        
         if not selection:
-            self.status_text = "No file selected"
+            self.status_text = "No file selected or cancelled"
             return
 
         # اگر خروجی لیست یا تاپل بود اولین آیتم، وگرنه خود مقدار
@@ -75,6 +77,7 @@ class AegisScreen(Screen): # یا هر نام کلاسی که صفحه‌تان 
         # آپدیت فیلدهای نمایشی روی ترد اصلی
         self.selected_file_text = f"Selected: {filename}"
         self.status_text = "Status: File loaded successfully"
+
     def read_kdf_parameters(self):
         try:
             m_input = int(self.ids.memory_input.text.strip() or 64)
