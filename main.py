@@ -59,6 +59,7 @@ class AegisScreen(Screen): # یا هر نام کلاسی که صفحه‌تان 
 
     @mainthread
     def _on_file_selected(self, selection):
+        self.status_text = f"Callback called! Type: {type(selection)} Val: {selection}"
         print(f"DEBUG SELECTION: {selection}")
         
         if not selection:
