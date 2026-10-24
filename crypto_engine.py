@@ -1,8 +1,8 @@
 import os
 import struct
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM, ChaCha20Poly1305
-from cryptography.hazmat.primitives.kdf.argon2 import Argon2id
-from cryptography.exceptions import InvalidTag
+from Crypto.Cipher import AES, ChaCha20_Poly1305
+from Crypto.Protocol.KDF import argon2_derive
+from Crypto.Exceptions import KeyError, ValueError as CryptoValueError
 
 MAGIC = b"AEGISCRYPT1"
 ALGO_AES_GCM = 1
@@ -10,16 +10,16 @@ ALGO_CHACHA20 = 2
 
 
 def derive_key(password: str, salt: bytes, memory_kib: int, iterations: int, parallelism: int) -> bytes:
-    kdf = Argon2id(
+    # پیاده‌سازی استاندارد و ایمن Argon2id با pycryptodome
+    return argon2_derive(
+        password=password,
         salt=salt,
-        length=32,
-        iterations=iterations,
-        lanes=parallelism,
+        key_len=32,
+        type="argon2id",
         memory_cost=memory_kib,
-        ad=None,
-        secret_box=None
+        time_cost=iterations,
+        parallelism=parallelism
     )
-    return kdf.derive(password.encode('utf-8'))
 
 
 def encrypt_file(src_path: str, dst_path: str, password: str, algorithm: str,
@@ -33,13 +33,15 @@ def encrypt_file(src_path: str, dst_path: str, password: str, algorithm: str,
     if algorithm == "AES-256-GCM":
         algo_id = ALGO_AES_GCM
         nonce = os.urandom(12)
-        cipher = AESGCM(key)
-        ciphertext = cipher.encrypt(nonce, plaintext, None)
+        cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+        ciphertext, tag = cipher.encrypt_and_digest(plaintext)
+        payload = tag + ciphertext
     elif algorithm == "ChaCha20-Poly1305":
         algo_id = ALGO_CHACHA20
         nonce = os.urandom(12)
-        cipher = ChaCha20Poly1305(key)
-        ciphertext = cipher.encrypt(nonce, plaintext, None)
+        cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
+        ciphertext, tag = cipher.encrypt_and_digest(plaintext)
+        payload = tag + ciphertext
     else:
         raise ValueError(f"Unsupported algorithm: {algorithm}")
 
@@ -47,7 +49,7 @@ def encrypt_file(src_path: str, dst_path: str, password: str, algorithm: str,
 
     with open(dst_path, "wb") as f:
         f.write(header)
-        f.write(ciphertext)
+        f.write(payload)
 
 
 def decrypt_file(src_path: str, dst_path: str, password: str):
@@ -55,7 +57,7 @@ def decrypt_file(src_path: str, dst_path: str, password: str):
 
     with open(src_path, "rb") as f:
         header = f.read(header_len)
-        ciphertext = f.read()
+        data = f.read()
 
     if len(header) < header_len or not header.startswith(MAGIC):
         raise ValueError("Invalid Aegis file or corrupted header.")
@@ -71,12 +73,15 @@ def decrypt_file(src_path: str, dst_path: str, password: str):
 
     key = derive_key(password, salt, memory_kib, iterations, parallelism)
 
+    tag = data[:16]
+    ciphertext = data[16:]
+
     if algo_id == ALGO_AES_GCM:
-        cipher = AESGCM(key)
-        plaintext = cipher.decrypt(nonce, ciphertext, None)
+        cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+        plaintext = cipher.decrypt_and_verify(ciphertext, tag)
     elif algo_id == ALGO_CHACHA20:
-        cipher = ChaCha20Poly1305(key)
-        plaintext = cipher.decrypt(nonce, ciphertext, None)
+        cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
+        plaintext = cipher.decrypt_and_verify(ciphertext, tag)
     else:
         raise ValueError("Unsupported algorithm ID in file header.")
 
