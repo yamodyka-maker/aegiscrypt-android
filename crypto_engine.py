@@ -1,28 +1,32 @@
 import os
 import struct
+import hashlib
 from Crypto.Cipher import AES, ChaCha20_Poly1305
-from Crypto.Protocol.KDF import argon2
 
 MAGIC = b"AEGISCRYPT1"
 ALGO_AES_GCM = 1
 ALGO_CHACHA20 = 2
 
-def derive_key(password: str, salt: bytes, memory_kib: int, iterations: int, parallelism: int) -> bytes:
-    # استفاده از Argon2id استاندارد pycryptodome که به هیچ پکیج C/Rust خارجی نیاز ندارد
-    return argon2(
-        password=password.encode('utf-8'),
+# تنظیمات استاندارد و امن Scrypt برای مشتق‌گیری کلید بدون وابستگی خارجی
+SCRYPT_N = 16384  # میزان حافظه/سختی محاسباتی
+SCRYPT_R = 8      # اندازه بلوک
+SCRYPT_P = 1      # موازی‌سازی
+
+def derive_key(password: str, salt: bytes, n: int = SCRYPT_N, r: int = SCRYPT_R, p: int = SCRYPT_P) -> bytes:
+    """مشتق‌گیری کلید ۳۲ بایتی با استفاده از hashlib استاندارد خود پایتون"""
+    return hashlib.scrypt(
+        password.encode('utf-8'),
         salt=salt,
-        key_len=32,
-        type=argon2.Argon2id,
-        memory_cost=memory_kib,
-        time_cost=iterations,
-        parallelism=parallelism
+        n=n,
+        r=r,
+        p=p,
+        dklen=32
     )
 
 def encrypt_file(src_path: str, dst_path: str, password: str, algorithm: str,
                  memory_kib: int = 65536, iterations: int = 2, parallelism: int = 2):
     salt = os.urandom(16)
-    key = derive_key(password, salt, memory_kib, iterations, parallelism)
+    key = derive_key(password, salt)
 
     with open(src_path, "rb") as f:
         plaintext = f.read()
@@ -40,8 +44,9 @@ def encrypt_file(src_path: str, dst_path: str, password: str, algorithm: str,
         ciphertext, tag = cipher.encrypt_and_digest(plaintext)
         payload = tag + ciphertext
     else:
-        raise ValueError(f"Unsupported algorithm: {algorithm}")
+        raise ValueError(f"الگوریتم پشتیبانی نمی‌شود: {algorithm}")
 
+    # هدر استاندارد شامل مشخصات الگوریتم، salt و nonce
     header = MAGIC + struct.pack(">B I I I", algo_id, memory_kib, iterations, parallelism) + salt + nonce
 
     with open(dst_path, "wb") as f:
@@ -67,7 +72,8 @@ def decrypt_file(src_path: str, dst_path: str, password: str):
 
     nonce = header[offset:offset + 12]
 
-    key = derive_key(password, salt, memory_kib, iterations, parallelism)
+    # ساخت مجدد کلید رمزنگاری
+    key = derive_key(password, salt)
 
     tag = data[:16]
     ciphertext = data[16:]
