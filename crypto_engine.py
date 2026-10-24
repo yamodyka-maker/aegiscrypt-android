@@ -1,26 +1,23 @@
 import os
 import struct
 from Crypto.Cipher import AES, ChaCha20_Poly1305
-from Crypto.Protocol.KDF import argon2_derive
-from Crypto.Exceptions import KeyError, ValueError as CryptoValueError
+from Crypto.Protocol.KDF import argon2
 
 MAGIC = b"AEGISCRYPT1"
 ALGO_AES_GCM = 1
 ALGO_CHACHA20 = 2
 
-
 def derive_key(password: str, salt: bytes, memory_kib: int, iterations: int, parallelism: int) -> bytes:
-    # پیاده‌سازی استاندارد و ایمن Argon2id با pycryptodome
-    return argon2_derive(
-        password=password,
+    # استفاده از Argon2id استاندارد pycryptodome که به هیچ پکیج C/Rust خارجی نیاز ندارد
+    return argon2(
+        password=password.encode('utf-8'),
         salt=salt,
         key_len=32,
-        type="argon2id",
+        type=argon2.Argon2id,
         memory_cost=memory_kib,
         time_cost=iterations,
         parallelism=parallelism
     )
-
 
 def encrypt_file(src_path: str, dst_path: str, password: str, algorithm: str,
                  memory_kib: int = 65536, iterations: int = 2, parallelism: int = 2):
@@ -51,7 +48,6 @@ def encrypt_file(src_path: str, dst_path: str, password: str, algorithm: str,
         f.write(header)
         f.write(payload)
 
-
 def decrypt_file(src_path: str, dst_path: str, password: str):
     header_len = len(MAGIC) + 13 + 16 + 12
 
@@ -60,7 +56,7 @@ def decrypt_file(src_path: str, dst_path: str, password: str):
         data = f.read()
 
     if len(header) < header_len or not header.startswith(MAGIC):
-        raise ValueError("Invalid Aegis file or corrupted header.")
+        raise ValueError("فایل نامعتبر است یا ساختار Aegis ندارد.")
 
     offset = len(MAGIC)
     algo_id, memory_kib, iterations, parallelism = struct.unpack(">B I I I", header[offset:offset + 13])
@@ -83,7 +79,7 @@ def decrypt_file(src_path: str, dst_path: str, password: str):
         cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
         plaintext = cipher.decrypt_and_verify(ciphertext, tag)
     else:
-        raise ValueError("Unsupported algorithm ID in file header.")
+        raise ValueError("شناسایی الگوریتم در هدر فایل نامعتبر است.")
 
     with open(dst_path, "wb") as f:
         f.write(plaintext)
