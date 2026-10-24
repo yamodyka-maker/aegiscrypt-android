@@ -58,27 +58,26 @@ class AegisScreen(Screen): # یا هر نام کلاسی که صفحه‌تان 
             self.status_text = f"Error: {e}"
 
     @mainthread
-    def _on_file_selected(self, selection):
-        self.status_text = f"Callback called! Type: {type(selection)} Val: {selection}"
-        print(f"DEBUG SELECTION: {selection}")
-        
+    def on_file_selected(self, selection):
         if not selection:
-            self.status_text = "No file selected or cancelled"
+            self.set_status("فایلی انتخاب نشد.", [0.97, 0.44, 0.44, 1])
             return
 
-        # اگر خروجی لیست یا تاپل بود اولین آیتم، وگرنه خود مقدار
-        path = selection[0] if isinstance(selection, (list, tuple)) else selection
-        
-        if isinstance(path, bytes):
-            path = path.decode('utf-8')
+        try:
+            path = selection[0] if isinstance(selection, (list, tuple)) else selection
+            if isinstance(path, bytes):
+                path = path.decode('utf-8')
             
-        self.selected_path = str(path)
-        filename = os.path.basename(self.selected_path)
-        
-        # آپدیت فیلدهای نمایشی روی ترد اصلی
-        self.selected_file_text = f"Selected: {filename}"
-        self.status_text = "Status: File loaded successfully"
+            self.selected_path = str(path)
+            filename = os.path.basename(self.selected_path)
+            if not filename:
+                filename = "فایل انتخاب‌شده"
 
+            self.selected_file_text = fa(f"فایل: {filename}")
+            self.set_status("فایل با موفقیت انتخاب شد.", [0.13, 0.77, 0.37, 1])
+
+        except Exception as exc:
+            self.set_status(f"خطا در پردازش مسیر: {exc}", [0.97, 0.44, 0.44, 1])
     def read_kdf_parameters(self):
         try:
             m_input = int(self.ids.memory_input.text.strip() or 64)
