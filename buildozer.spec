@@ -5,7 +5,6 @@ package.domain = com.aegislabs.us
 source.dir = .
 source.exts = py,png,jpg,kv,atlas,ttf
 version = 1.2.0
-
 #requirements = python3,kivy==2.3.1,cryptography>=43.0.0,plyer,charset_normalizer<3.4
 #requirements = python3,kivy==2.3.1,pycryptodome,plyer,charset_normalizer<3.4
 #requirements = python3,kivy==2.3.1,pycryptodome,plyer,arabic_reshaper,python-bidi,charset_normalizer<3.4
