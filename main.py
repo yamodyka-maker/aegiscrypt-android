@@ -3,21 +3,22 @@ import threading
 
 from kivy.app import App
 from kivy.clock import Clock
-from kivy.core.text import LabelBase, DEFAULT_FONT
-from kivy.properties import StringProperty
-
-# تنظیم فونت پیش‌فرض برای پشتیبانی از حروف فارسی نام فایل‌ها
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FONT_PATH = os.path.join(BASE_DIR, "tahoma.ttf")
-if os.path.exists(FONT_PATH):
-    LabelBase.register(DEFAULT_FONT, FONT_PATH)
-
+from kivy.properties import StringProperty, ListProperty
 from kivy.uix.screenmanager import Screen
 from plyer import filechooser
 
-from cryptography.exceptions import InvalidTag
+import arabic_reshaper
+from bidi.algorithm import get_display
+
 from crypto_engine import encrypt_file, decrypt_file
 
+
+def fa(text: str) -> str:
+    """اصلاح شکل و جهت نمایش متن فارسی در Kivy."""
+    try:
+        return get_display(arabic_reshaper.reshape(str(text)))
+    except Exception:
+        return str(text)
 
 class AegisScreen(Screen):
     # تطابق ۱۰۰ درصدی با متغیرهای aegis.kv
