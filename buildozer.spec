@@ -12,7 +12,8 @@ version = 1.2.0
 #requirements = python3,kivy==2.3.1,pycryptodome,plyer,arabic_reshaper,python-bidi,charset_normalizer<3.4
 #requirements = python3,kivy==2.3.1,pycryptodome,plyer,arabic-reshaper,python-bidi,charset_normalizer<3.4
 #requirements = python3,kivy,cryptography,arabic-reshaper,python-bidi
-requirements = python3,kivy==2.3.0,cryptography,arabic-reshaper,python-bidi
+#requirements = python3,kivy==2.3.0,cryptography,arabic-reshaper,python-bidi
+requirements = python3,kivy,cryptography,arabic-reshaper,python-bidi
 
 orientation = portrait
 fullscreen = 0
