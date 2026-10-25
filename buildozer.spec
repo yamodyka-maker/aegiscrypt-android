@@ -15,7 +15,9 @@ requirements = python3,kivy,cryptography,arabic-reshaper,python-bidi
 
 orientation = portrait
 fullscreen = 0
-android.permissions = WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
+#android.permissions = WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
+android.permissions = READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,MANAGE_EXTERNAL_STORAGE
+
 android.api = 33
 android.minapi = 24
 android.archs = arm64-v8a
