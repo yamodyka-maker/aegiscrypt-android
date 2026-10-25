@@ -3,23 +3,14 @@ import threading
 from kivy.app import App
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.properties import StringProperty, ColorProperty
-from kivy.clock import mainthread
+from kivy.clock import mainthread, Clock
 from kivy.utils import platform
+from kivy.uix.popup import Popup
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
+from kivy.uix.filechooser import FileChooserListView
 
-# تلاش برای ایمپورت کردن پلیر برای دسکتاپ
-try:
-    from plyer import filechooser
-except ImportError:
-    filechooser = None
-
-# ایمپورت‌های اندرویدی برای فایل‌پیکر بومی
-if platform == 'android':
-    from jnius import autoclass
-    from android import mActivity
-    PythonActivity = autoclass('org.kivy.android.PythonActivity')
-    Intent = autoclass('android.content.Intent')
-    Uri = autoclass('android.net.Uri')
-
+# تنظیم پشتیبانی از متن فارسی
 try:
     import arabic_reshaper
     from bidi.algorithm import get_display
@@ -38,7 +29,6 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-import base64
 
 
 class AegisScreen(Screen):
@@ -46,39 +36,62 @@ class AegisScreen(Screen):
     status_color = ColorProperty([1, 1, 1, 1])
     selected_path = StringProperty("")
 
-    def select_file(self):
-        """انتخاب فایل با پشتیبانی از انتخابگر بومی اندروید و دسکتاپ"""
-        self.set_status("در حال باز کردن انتخابگر فایل...", [1, 0.8, 0, 1])
-        
+    def get_initial_path(self):
+        """مسیر شروع مرورگر فایل بر اساس پلتفرم"""
         if platform == 'android':
-            try:
-                # استفاده از Intent بومی اندروید (ACTION_OPEN_DOCUMENT) برای سازگاری کامل با Scoped Storage
-                intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
-                intent.addCategory(Intent.CATEGORY_OPENABLE)
-                intent.setType("*/*")  # همه فایل‌ها
-                
-                # تعریف کالبک یا دریافت نتیجه (در اندروید پایتون، دریافت نتیجه از طریق PythonActivity پیاده می‌شود)
-                # روش ساده‌تر و پایدار در Kivy Android: استفاده از Intent مستقیم
-                current_activity = PythonActivity.mActivity
-                current_activity.startActivityForResult(intent, 42)
-                
-                # نکته: برای دریافت مسیر در اندروید نیاز به پیاده‌سازی onActivityResult در ریشه اپلیکیشن است.
-                # اما برای اینکه کار سریع راه بیفتد، یک راهکار تضمینی دیگر: استفاده از Pyobjus یا کادر متنی کمکی.
-            except Exception as e:
-                self.set_status(f"خطا در باز کردن فایل‌پیکر بومی: {e}", [1, 0, 0, 1])
+            # مسیر حافظه مشترک و پوشه دانلود در اکثر گوشی‌های اندروید
+            paths_to_try = [
+                '/storage/emulated/0/Download',
+                '/storage/emulated/0/Documents',
+                '/storage/emulated/0'
+            ]
+            for p in paths_to_try:
+                if os.path.exists(p):
+                    return p
+            return '/storage/emulated/0'
+        return os.path.expanduser('~')
+
+    def select_file(self):
+        """باز کردن پنجره داخلی و پایدار برای انتخاب فایل"""
+        layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
         
-        # حالت دسکتاپ یا تست با plyer
-        elif filechooser:
-            try:
-                filechooser.open_file(on_selection=self.on_file_selected)
-            except Exception as e:
-                self.set_status(f"خطا در پلیر: {e}", [1, 0, 0, 1])
-        else:
-            self.set_status("انتخابگر فایل در این پلتفرم پشتیبانی نمی‌شود.", [1, 0, 0, 1])
+        initial_path = self.get_initial_path()
+        file_chooser = FileChooserListView(path=initial_path, dirselect=False)
+        layout.add_widget(file_chooser)
+        
+        btn_layout = BoxLayout(size_hint_y=None, height='45dp', spacing=10)
+        
+        popup = Popup(
+            title=fa("انتخاب فایل"),
+            content=layout,
+            size_hint=(0.95, 0.9)
+        )
+        
+        def confirm_selection(instance):
+            if file_chooser.selection:
+                self.on_file_selected(file_chooser.selection)
+                popup.dismiss()
+            else:
+                self.set_status("لطفاً یک فایل را لمس کرده و انتخاب کنید.", [1, 0.5, 0, 1])
+                
+        def cancel_selection(instance):
+            popup.dismiss()
+
+        btn_select = Button(text=fa("انتخاب"), font_name='tahoma.ttf' if os.path.exists('tahoma.ttf') else 'Roboto')
+        btn_select.bind(on_release=confirm_selection)
+        
+        btn_cancel = Button(text=fa("انصراف"), font_name='tahoma.ttf' if os.path.exists('tahoma.ttf') else 'Roboto')
+        btn_cancel.bind(on_release=cancel_selection)
+        
+        btn_layout.add_widget(btn_select)
+        btn_layout.add_widget(btn_cancel)
+        layout.add_widget(btn_layout)
+        
+        popup.open()
 
     @mainthread
     def on_file_selected(self, selection):
-        """کالبک زمان انتخاب فایل"""
+        """مدیریت فایل انتخاب‌شده"""
         if selection and len(selection) > 0:
             self.selected_path = selection[0]
             filename = os.path.basename(self.selected_path)
@@ -91,7 +104,6 @@ class AegisScreen(Screen):
         def update(dt):
             self.status_text = fa(text)
             self.status_color = color
-        from kivy.clock import Clock
         Clock.schedule_once(update, 0)
 
     def run_action(self, action_type):
@@ -99,13 +111,13 @@ class AegisScreen(Screen):
             self.set_status("لطفاً ابتدا یک فایل معتبر انتخاب کنید.", [1, 0, 0, 1])
             return
 
-        # خواندن پارامترها و اجرای عملیات در ترد جداگانه
         try:
             iterations, parallel, password = self.read_kdf_parameters()
             if not password:
                 return
             
-            self.set_status(f"در حال پردازش ({action_type})...", [0, 0.7, 1, 1])
+            action_fa = "رمزنگاری" if action_type == 'encrypt' else "رمزگشایی"
+            self.set_status(f"در حال {action_fa}...", [0, 0.7, 1, 1])
             threading.Thread(
                 target=self._worker,
                 args=(action_type, self.selected_path, password, iterations, parallel),
@@ -129,7 +141,7 @@ class AegisScreen(Screen):
 
     def _worker(self, action_type, file_path, password, iterations, parallel):
         try:
-            salt = b'AegisCryptSaltVal' # در نسخه نهایی باید تصادفی و ذخیره شود
+            salt = b'AegisCryptSaltVal'
             kdf = PBKDF2HMAC(
                 algorithm=hashes.SHA256(),
                 length=32,
@@ -178,5 +190,5 @@ class AegisApp(App):
         return sm
 
 
-if `__name__ == '__main__':
+if __name__ == '__main__':
     AegisApp().run()
