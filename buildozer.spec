@@ -6,6 +6,7 @@ source.dir = .
 source.include_exts = py
 version = 1.3.0
 
+
 requirements = python3,kivy==2.3.0,pyjnius,argon2-cffi,cffi,cryptography
 
 orientation = portrait
@@ -19,7 +20,8 @@ android.archs = arm64-v8a, armeabi-v7a
 android.permissions = READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE
 android.accept_sdk_license = True
 android.allow_backup = True
-
+p4a.branch = v2024.01.21
 [buildozer]
 log_level = 2
 warn_on_root = 1
+
