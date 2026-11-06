@@ -7,7 +7,9 @@ source.include_exts = py
 version = 1.3.0
 
 
-requirements = python3,kivy==2.3.0,pyjnius,argon2-cffi,cffi,cryptography
+#requirements = python3,kivy==2.3.0,pyjnius,argon2-cffi,cffi,cryptography
+requirements = python3,kivy==2.3.0,pyjnius,argon2-cffi,cffi,cryptography,six
+p4a.local_recipes = ./recipes
 
 orientation = portrait
 fullscreen = 0
