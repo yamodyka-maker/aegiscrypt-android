@@ -215,11 +215,27 @@ class AegisApp(App):
 
     # --- helpers ---
     def request_android_permissions(self):
-        if platform == "android":
-            from android.permissions import request_permissions, Permission
-            request_permissions([Permission.READ_EXTERNAL_STORAGE,
-                                 Permission.WRITE_EXTERNAL_STORAGE])
-
+        if platform != "android":
+            return
+        from android.permissions import request_permissions, Permission
+        request_permissions([Permission.READ_EXTERNAL_STORAGE,
+                             Permission.WRITE_EXTERNAL_STORAGE])
+        try:
+            from jnius import autoclass
+            VERSION = autoclass("android.os.Build$VERSION")
+            if VERSION.SDK_INT >= 30:
+                Environment = autoclass("android.os.Environment")
+                if not Environment.isExternalStorageManager():
+                    Intent = autoclass("android.content.Intent")
+                    Settings = autoclass("android.provider.Settings")
+                    Uri = autoclass("android.net.Uri")
+                    PythonActivity = autoclass("org.kivy.android.PythonActivity")
+                    act = PythonActivity.mActivity
+                    intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                    intent.setData(Uri.parse("package:" + act.getPackageName()))
+                    act.startActivity(intent)
+        except Exception as e:
+            print("All-files permission error:", e)
     def log(self, msg):
         ts = time.strftime("%H:%M:%S")
         self.log_label.text = (self.log_label.text + f"[{ts}] {msg}\n")
